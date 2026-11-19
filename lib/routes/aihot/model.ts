@@ -3,7 +3,7 @@ import type { Context } from 'hono';
 import type { Data, DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
-import { parseDate } from '@/utils/parse-date';
+import { parseDate } from '@/utils/time';
 
 import { BASE_URL, unpackTurboStream, USER_AGENT } from './utils';
 
@@ -150,7 +150,7 @@ async function handler(ctx: Context): Promise<Data> {
         link: modelLink,
         guid: `aihot:model:${slug}:overview`,
         author: model.provider,
-        pubDate: parseDate(model.releasedAt || run?.generatedAt || new Date()),
+        pubDate: parseDate(model.releasedAt || run?.generatedAt || Date.now()),
         description: overviewHtml,
         category: ['总览', model.provider],
     });
@@ -200,7 +200,7 @@ async function handler(ctx: Context): Promise<Data> {
             link: modelLink,
             guid: `aihot:model:${slug}:${group.key}`,
             author: model.provider,
-            pubDate: parseDate(model.releasedAt || run?.generatedAt || new Date()),
+            pubDate: parseDate(model.releasedAt || run?.generatedAt || Date.now()),
             description: groupDescription,
             category: [group.name, model.provider],
         });
@@ -214,7 +214,7 @@ async function handler(ctx: Context): Promise<Data> {
             link: modelLink,
             guid: `aihot:model:${slug}:unmeasured`,
             author: model.provider,
-            pubDate: parseDate(model.releasedAt || run?.generatedAt || new Date()),
+            pubDate: parseDate(model.releasedAt || run?.generatedAt || Date.now()),
             description: `<div style="font-family: sans-serif;"><h3>尚未取得有效成绩的公开评测项（${unmeasured.length}项）：</h3><ul>${unmeasuredList}</ul></div>`,
             category: ['待测项', model.provider],
         });

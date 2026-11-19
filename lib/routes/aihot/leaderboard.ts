@@ -4,7 +4,7 @@ import InvalidParameterError from '@/errors/types/invalid-parameter';
 import type { Data, DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
-import { parseDate } from '@/utils/parse-date';
+import { parseDate } from '@/utils/time';
 
 import { BASE_URL, unpackTurboStream, USER_AGENT } from './utils';
 
@@ -217,7 +217,7 @@ async function handler(ctx: Context): Promise<Data> {
             link: `${BASE_URL}/leaderboard/${model.slug}`,
             guid: `aihot:leaderboard:${category}:${model.slug}:${entry.rank}`,
             author: model.provider,
-            pubDate: parseDate(model.releasedAt || payload.run?.generatedAt || new Date()),
+            pubDate: parseDate(model.releasedAt || payload.run?.generatedAt || Date.now()),
             description,
             category: categories,
         };

@@ -8,7 +8,7 @@ import { config } from '@/config';
 import type { Data, DataItem, Route } from '@/types';
 import { ViewType } from '@/types';
 import ofetch from '@/utils/ofetch';
-import { parseDate } from '@/utils/parse-date';
+import { compareDates, parseDate } from '@/utils/time';
 
 interface IncidentUpdate {
     status: string;
@@ -37,8 +37,10 @@ function createItem(incident: Incident, update: IncidentUpdate, index: number) {
     const body = md.renderInline(update.body.replaceAll(/\r?\n/g, '<br>'));
     const text = load(body, null, false).text();
     // Statuspage's HTML timestamps use second precision; preserve existing GUIDs.
-    const timestamp = Math.floor(parseDate(update.display_at).getTime() / 1000) * 1000;
-    const pubDate = parseDate(timestamp, 'x');
+    const instant = parseDate(update.display_at) ?? Temporal.Now.instant();
+    const timestamp = Math.floor(instant.epochMilliseconds / 1000) * 1000;
+    const pubDate = Temporal.Instant.fromEpochMilliseconds(timestamp);
+    const pubDateObj = new Date(timestamp);
     const link = `${baseUrl}/incidents/${incident.id}`;
     const guid = `${link}#${timestamp}`;
     const description = renderToString(
@@ -54,9 +56,9 @@ function createItem(incident: Incident, update: IncidentUpdate, index: number) {
             <br />
             <small>
                 <span class="ago" data-datetime-unix={timestamp} />
-                {pubDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
+                {pubDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
                 {' - '}
-                {pubDate.toISOString().slice(11, 16)} UTC
+                {pubDateObj.toISOString().slice(11, 16)} UTC
             </small>
         </>
     );
@@ -82,7 +84,7 @@ export const handler = async (ctx: Context): Promise<Data> => {
     });
     const items = [...response.incidents, ...response.scheduled_maintenances]
         .flatMap((incident) => incident.incident_updates.map((update, index) => createItem(incident, update, index)))
-        .toSorted((a, b) => b.pubDate.getTime() - a.pubDate.getTime())
+        .toSorted((a, b) => compareDates(b.pubDate, a.pubDate))
         .slice(0, limit);
 
     return {

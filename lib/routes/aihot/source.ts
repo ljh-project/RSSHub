@@ -3,7 +3,7 @@ import type { Context } from 'hono';
 import type { Data, DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
-import { parseDate } from '@/utils/parse-date';
+import { parseDate } from '@/utils/time';
 
 import { BASE_URL, unpackTurboStream, USER_AGENT } from './utils';
 
@@ -79,7 +79,7 @@ async function handler(ctx: Context): Promise<Data> {
         3600 * 4
     );
     const sourceLink = `${BASE_URL}/leaderboard/sources/${sourceKey}`;
-    const pubDate = parseDate(run?.generatedAt || new Date().toISOString());
+    const pubDate = parseDate(run?.generatedAt || Date.now());
 
     const items: DataItem[] = (rows || []).map((row) => {
         const title = `[No.${row.sourceRank} 得分: ${row.display}] ${row.sourceModelName} (${row.provider})`;
