@@ -21,8 +21,14 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 const DETAIL_CONCURRENCY = 5;
 const CATEGORY_RE = /^[a-z0-9-]+$/;
-const AUTHOR_HEADING_RE = /^about the authors?:?$/i;
+const AUTHOR_HEADING_RE = /^(?:about(?:\s+(?:the|our))?\s+authors?|authors?\s+bio(?:\(s\)|s)?):?$/i;
 const SAFE_HTTP_PROTOCOLS = new Set(['http:', 'https:']);
+
+interface FeedEnclosure {
+    url: string;
+    type?: string;
+    length?: number;
+}
 
 interface CleanedContent {
     description: string;
@@ -45,7 +51,10 @@ interface ParsedFeedEntry {
     description: string;
     bodyImage?: string;
     boxAuthors: string[];
+    enclosure?: FeedEnclosure;
 }
+
+const normalizeText = (value: string | undefined): string => value?.replaceAll(/\s+/g, ' ').trim() ?? '';
 
 const resolveHttpUrl = (rawUrl: string | undefined, baseUrl: string): string | undefined => {
     const trimmed = rawUrl?.trim();
@@ -57,14 +66,14 @@ const resolveHttpUrl = (rawUrl: string | undefined, baseUrl: string): string | u
 };
 
 const extractCategories = (rawCategories: string[] | undefined): string[] | undefined => {
-    const unique = [...new Set((rawCategories ?? []).map((tag) => tag.trim()).filter(Boolean))];
+    const unique = [...new Set((rawCategories ?? []).map((tag) => normalizeText(tag)).filter(Boolean))];
     return unique.length > 0 ? unique : undefined;
 };
 
 const extractBoxAuthors = ($: CheerioAPI): string[] => {
     const authors: string[] = [];
     for (const el of $('.blog-author-box').toArray()) {
-        const name = $(el).find('h2, h3, h4, h5').first().text().trim();
+        const name = normalizeText($(el).find('h2, h3, h4, h5').first().text());
         if (name) {
             authors.push(name);
         }
@@ -72,16 +81,59 @@ const extractBoxAuthors = ($: CheerioAPI): string[] => {
     return authors;
 };
 
-const removePrecedingAuthorChrome = ($footer: Cheerio<Element>): void => {
-    let $prev = $footer.prev();
-    while ($prev.length && ($prev.is('hr') || ($prev.is('h1, h2, h3, h4, h5, h6, p') && AUTHOR_HEADING_RE.test($prev.text().trim())))) {
+const isAuthorHeading = ($node: Cheerio<Element>): boolean => $node.is('h1, h2, h3, h4, h5, h6, p') && AUTHOR_HEADING_RE.test(normalizeText($node.text()));
+
+const isBlankParagraph = ($node: Cheerio<Element>): boolean => $node.is('p') && normalizeText($node.text()) === '' && $node.find('img, video, audio, iframe, svg').length === 0;
+
+const isTrailingSectionBoundary = ($node: Cheerio<Element>): boolean => {
+    if ($node.is('h1, h2, h3, h4, h5, h6')) {
+        return !isAuthorHeading($node);
+    }
+    if ($node.is('ol.blog-footnotes')) {
+        return true;
+    }
+    if (!$node.is('hr')) {
+        return false;
+    }
+    let $after = $node.next();
+    while ($after.length && isBlankParagraph($after)) {
+        $after = $after.next();
+    }
+    return isTrailingSectionBoundary($after);
+};
+
+const removePrecedingAuthorChrome = ($target: Cheerio<Element>): void => {
+    let $prev = $target.prev();
+    while ($prev.length && ($prev.is('hr') || isAuthorHeading($prev) || isBlankParagraph($prev))) {
         const $toRemove = $prev;
         $prev = $prev.prev();
         $toRemove.remove();
     }
 };
 
+const removeAuthorBioSections = ($: CheerioAPI): void => {
+    const headings = $('h1, h2, h3, h4, h5, h6, p')
+        .filter((_, el) => isAuthorHeading($(el)))
+        .toArray();
+    for (const heading of headings) {
+        if (!heading.parent) {
+            continue;
+        }
+        const $heading = $(heading);
+        removePrecedingAuthorChrome($heading);
+        let $next = $heading.next();
+        while ($next.length && !isTrailingSectionBoundary($next)) {
+            const $toRemove = $next;
+            $next = $next.next();
+            $toRemove.remove();
+        }
+        $heading.remove();
+    }
+};
+
 const removeAuthorFooter = ($: CheerioAPI): void => {
+    removeAuthorBioSections($);
+
     const authorFooters = $('footer')
         .filter((_, el) => $(el).find('.blog-author-box').length > 0)
         .toArray();
@@ -90,7 +142,12 @@ const removeAuthorFooter = ($: CheerioAPI): void => {
         removePrecedingAuthorChrome($footer);
         $footer.remove();
     }
-    $('.blog-author-box').remove();
+
+    for (const box of $('.blog-author-box').toArray()) {
+        const $box = $(box);
+        removePrecedingAuthorChrome($box);
+        $box.remove();
+    }
 };
 
 const pickFirstImage = ($: CheerioAPI, baseUrl: string): string | undefined => {
@@ -125,11 +182,35 @@ const cleanRssContent = (rawItem: RssItem, link: string): CleanedContent => {
     };
 };
 
+const parseEnclosureLength = (rawLength: number | string | undefined): number | undefined => {
+    if (typeof rawLength === 'number') {
+        return Number.isFinite(rawLength) && rawLength >= 0 ? rawLength : undefined;
+    }
+    const trimmed = rawLength?.trim();
+    if (!trimmed) {
+        return undefined;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+};
+
+const parseEnclosure = (rawEnclosure: RssItem['enclosure'], blogUrl: string): FeedEnclosure | undefined => {
+    const url = resolveHttpUrl(rawEnclosure?.url, blogUrl);
+    if (!url) {
+        return undefined;
+    }
+    return {
+        url,
+        type: normalizeText(rawEnclosure?.type) || undefined,
+        length: parseEnclosureLength(rawEnclosure?.length),
+    };
+};
+
 const mergeAuthors = (orderedCandidates: ReadonlyArray<string | undefined>): DataItem['author'] => {
     const seen = new Set<string>();
     const names: string[] = [];
     for (const candidate of orderedCandidates) {
-        const name = candidate?.trim();
+        const name = normalizeText(candidate);
         if (!name) {
             continue;
         }
@@ -157,11 +238,12 @@ const toParsedFeedEntry = (rawItem: RssItem, blogUrl: string): ParsedFeedEntry |
         link,
         guid: rawItem.guid?.trim() || link,
         pubDate: rawDate ? parseDate(rawDate) : undefined,
-        creator: rawItem.creator,
+        creator: normalizeText(rawItem.creator) || undefined,
         category: extractCategories(rawItem.categories),
         description: cleaned.description,
         bodyImage: cleaned.bodyImage,
         boxAuthors: cleaned.boxAuthors,
+        enclosure: parseEnclosure(rawItem.enclosure, blogUrl),
     };
 };
 
@@ -187,12 +269,12 @@ const parseFeedEntries = (rawItems: RssItem[], blogUrl: string, limit: number): 
 const fetchArticlePageMeta = async (link: string): Promise<ArticlePageMeta> => {
     try {
         return await cache.tryGet<ArticlePageMeta>(`amazon:blogs:meta:${link}`, async () => {
-            const html = await ofetch(link, { responseType: 'text' });
+            const html = await ofetch(link, { responseType: 'text', publicOnly: true });
             const $ = load(html);
             const ogImage = $('meta[property="og:image"]').attr('content') ?? $('meta[name="twitter:image"]').attr('content');
             const authors = $('[property="author"] [property="name"]')
                 .toArray()
-                .map((el) => $(el).text().trim())
+                .map((el) => normalizeText($(el).text()))
                 .filter(Boolean);
             return {
                 image: resolveHttpUrl(ogImage, link),
@@ -204,9 +286,20 @@ const fetchArticlePageMeta = async (link: string): Promise<ArticlePageMeta> => {
     }
 };
 
+const resolveAuthorCandidates = (boxAuthors: string[], pageMeta: ArticlePageMeta | undefined, creator: string | undefined): ReadonlyArray<string | undefined> => {
+    if (boxAuthors.length > 0) {
+        return boxAuthors;
+    }
+    if (pageMeta?.authors.length) {
+        return pageMeta.authors;
+    }
+    return [creator];
+};
+
 const enrichFeedEntry = async (entry: ParsedFeedEntry): Promise<DataItem> => {
-    const pageMeta = entry.bodyImage ? undefined : await fetchArticlePageMeta(entry.link);
-    const orderedAuthors = entry.boxAuthors.length > 0 ? [...entry.boxAuthors, entry.creator] : [...(pageMeta?.authors ?? []), entry.creator];
+    const needPageMeta = !entry.bodyImage || entry.boxAuthors.length === 0;
+    const pageMeta = needPageMeta ? await fetchArticlePageMeta(entry.link) : undefined;
+    const orderedAuthors = resolveAuthorCandidates(entry.boxAuthors, pageMeta, entry.creator);
 
     return {
         title: entry.title,
@@ -217,6 +310,9 @@ const enrichFeedEntry = async (entry: ParsedFeedEntry): Promise<DataItem> => {
         category: entry.category,
         guid: entry.guid,
         image: entry.bodyImage ?? pageMeta?.image,
+        enclosure_url: entry.enclosure?.url,
+        enclosure_type: entry.enclosure?.type,
+        enclosure_length: entry.enclosure?.length,
     };
 };
 
