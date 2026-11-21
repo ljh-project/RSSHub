@@ -1,4 +1,5 @@
-import { type Cheerio, type CheerioAPI, load } from 'cheerio';
+import type { Cheerio, CheerioAPI } from 'cheerio';
+import { load } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Context } from 'hono';
 import pMap from 'p-map';
@@ -296,7 +297,7 @@ const applyTailwindSvgToken = ($el: Cheerio<Element>, token: string, vars: Map<s
         setMissingAttr($el, 'fill', '#7fee641a');
         return;
     }
-    const prefixMatch = token.match(/^(fill|stroke|text)-(v2-primary-[a-z0-9-]+)$/);
+    const prefixMatch = /^(fill|stroke|text)-(v2-primary-[a-z0-9-]+)$/.exec(token);
     if (!prefixMatch) {
         return;
     }
@@ -485,7 +486,7 @@ async function handler(ctx: Context): Promise<Data> {
         description: feedSubtitle,
         link: BLOG_URL,
         language: 'en',
-        item: items as DataItem[],
+        item: items,
     };
 }
 

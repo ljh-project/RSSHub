@@ -8,7 +8,7 @@ import { calendarToInstant, parseDate } from '@/utils/time';
 const baseUrl = 'https://www.aac.moj.gov.tw';
 
 function parseListDate(value: string) {
-    const match = value.match(/(\d{3,4})-(\d{1,2})-(\d{1,2})/);
+    const match = /(\d{3,4})-(\d{1,2})-(\d{1,2})/.exec(value);
     if (!match) {
         return;
     }
@@ -50,7 +50,7 @@ async function handler(ctx) {
             const isDownload = /檔案下載/.test($item.attr('title') ?? '');
             const title = isDownload ? $item.text() : $item.attr('title') || $item.text();
             return {
-                title: title!,
+                title,
                 link: new URL($item.attr('href')!, url).href,
                 pubDate: parseListDate($row.find('.date').text()),
                 isDownload,

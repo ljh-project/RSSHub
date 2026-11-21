@@ -22,7 +22,7 @@ const getPageItemAndDate = getPageDetails;
 export { getPageItemAndDate };
 
 const parseCmsDate = (text: string) => {
-    const value = text.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+    const value = /\d{4}-\d{2}-\d{2}/.exec(text)?.[0];
     return value && parseDateStrict(value, 'YYYY-MM-DD') ? parseDate(`${value}T00:00:00+08:00`) : undefined;
 };
 
@@ -35,7 +35,7 @@ const getCmsDetails = async (link: string) => {
         throw new Error(`Jishou University article content was not found: ${link}`);
     }
     body.find('img[data-src]').each((_, el) => {
-        $(el).attr('src', $(el).attr('data-src')!);
+        $(el).attr('src', $(el).attr('data-src'));
     });
     for (const el of body.find('[href], [src]').add(attachments).toArray()) {
         const node = $(el);

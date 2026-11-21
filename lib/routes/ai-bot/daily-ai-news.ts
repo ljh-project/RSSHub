@@ -1,4 +1,5 @@
-import { type Cheerio, type CheerioAPI, load } from 'cheerio';
+import type { Cheerio, CheerioAPI } from 'cheerio';
+import { load } from 'cheerio';
 import type { Element } from 'domhandler';
 
 import type { Data, DataItem, Route } from '@/types';
@@ -13,7 +14,7 @@ interface DateContext {
 
 function parseDateString(dateStr: string, ctx: DateContext): Temporal.Instant | undefined {
     // 格式如 "1月9·周五" 或 "12月25·周三"
-    const match = dateStr.match(/(\d+)月(\d+)/);
+    const match = /(\d+)月(\d+)/.exec(dateStr);
     if (!match) {
         return undefined;
     }

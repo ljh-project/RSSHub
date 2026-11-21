@@ -4,7 +4,8 @@ import type { DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import logger from '@/utils/logger';
 import ofetch from '@/utils/ofetch';
-import { getPlaywrightPage, type Page } from '@/utils/playwright';
+import type { Page } from '@/utils/playwright';
+import { getPlaywrightPage } from '@/utils/playwright';
 import { queryToBoolean } from '@/utils/readable-social';
 import { formatDate } from '@/utils/time';
 
@@ -56,7 +57,7 @@ function getRoomData(room?: DouyinRoom, owner?: DouyinUser): RoomData | undefine
 }
 
 function parseRoomScript(script: string) {
-    const match = script.match(/^\s*self\.__pace_f\.push\((\[.*\])\);?\s*$/s);
+    const match = /^\s*self\.__pace_f\.push\((\[.*\])\);?\s*$/s.exec(script);
     if (!match) {
         return;
     }

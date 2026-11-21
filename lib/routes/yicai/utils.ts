@@ -1,4 +1,5 @@
-import { type CheerioAPI, load } from 'cheerio';
+import type { CheerioAPI } from 'cheerio';
+import { load } from 'cheerio';
 import pMap from 'p-map';
 
 import InvalidParameterError from '@/errors/types/invalid-parameter';
@@ -128,7 +129,7 @@ function getNavigationChannels(html: string, section: 'news' | 'video'): Navigat
         });
 }
 function getBreadcrumbChannel(html: string, section: 'news' | 'video'): BreadcrumbChannel {
-    const match = html.match(/\bbreadcrumb\s*=\s*JSON\.parse\('([\s\S]*?)'\)/);
+    const match = /\bbreadcrumb\s*=\s*JSON\.parse\('([\s\S]*?)'\)/.exec(html);
     if (!match) {
         throw new Error('Yicai category page has no channel breadcrumb');
     }

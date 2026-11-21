@@ -1,4 +1,5 @@
-import { type CheerioAPI, load } from 'cheerio';
+import type { CheerioAPI } from 'cheerio';
+import { load } from 'cheerio';
 
 import type { DataItem } from '@/types';
 import cache from '@/utils/cache';
@@ -34,7 +35,7 @@ export function extractForumThreadDates($: CheerioAPI): Map<string, Temporal.Ins
 }
 
 export function extractNextData<T = unknown>(html: string, url?: string): T {
-    const scriptMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/);
+    const scriptMatch = /<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/.exec(html);
     if (!scriptMatch || !scriptMatch[1]) {
         throw new Error(`Failed to find __NEXT_DATA__ script tag in page${url ? `: ${url}` : ''}`);
     }
@@ -238,7 +239,7 @@ export function getEntryDetails(item: DataItem): Promise<DataItem> {
     if (!item.link) {
         return Promise.resolve(item);
     }
-    return cache.tryGet(item.link!, async () => {
+    return cache.tryGet(item.link, async () => {
         try {
             const detailResponse = await got({
                 method: 'get',

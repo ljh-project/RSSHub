@@ -1,4 +1,5 @@
-import { type Cheerio, type CheerioAPI, load } from 'cheerio';
+import type { Cheerio, CheerioAPI } from 'cheerio';
+import { load } from 'cheerio';
 import pMap from 'p-map';
 
 import InvalidParameterError from '@/errors/types/invalid-parameter';
@@ -159,7 +160,7 @@ const getArticleDetails = async (article: ArticleLink, pubDate?: Temporal.Instan
 };
 
 const parseEditionDate = (firstNodeUrl: string) => {
-    const dateMatch = firstNodeUrl.match(/\/(\d{4})-(\d{2})\/(\d{2})\//);
+    const dateMatch = /\/(\d{4})-(\d{2})\/(\d{2})\//.exec(firstNodeUrl);
     const dateString = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : undefined;
     const editionDate = dateString ? parseDateStrict(dateString, 'YYYY-MM-DD', 8) : undefined;
     return { dateString, editionDate };
