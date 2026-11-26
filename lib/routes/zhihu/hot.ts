@@ -145,7 +145,6 @@ const requestTopAnswers = async (questionId: string, cookie: string): Promise<Zh
             ...header,
             Cookie: cookie,
             Referer: `https://www.zhihu.com/question/${questionId}`,
-            'User-Agent': config.trueUA,
         },
     };
     try {
