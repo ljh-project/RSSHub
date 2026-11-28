@@ -7,7 +7,7 @@ import type { DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { getRouteLimit } from '@/utils/route-limit';
-import { parseDateStrict } from '@/utils/time';
+import { parseDate } from '@/utils/time';
 
 export const route: Route = {
     path: '/news/:path{.+}?',
@@ -20,7 +20,7 @@ export const route: Route = {
     description: `::: tip
 路径处填写对应页面 URL 中 \`https://news.ifeng.com/\` 后的字段。下面是一个例子。
 
-若订阅 [大湾区\\_资讯\\_凤凰网](https://news.ifeng.com/shanklist/3-305565-) 则将对应页面 URL \`https://news.ifeng.com/shanklist/3-305565-\` 中 \`https://news.ifeng.com/\` 后的字段 \`shanklist/3-305565-\` 作为路径填入。此时路由为 [\`/ifeng/news/shanklist/3-305565-\`](https://rsshub.app/ifeng/news/shanklist/3-305565-)
+若订阅 [大湾区_资讯_凤凰网](https://news.ifeng.com/shanklist/3-305565-) 则将对应页面 URL \`https://news.ifeng.com/shanklist/3-305565-\` 中 \`https://news.ifeng.com/\` 后的字段 \`shanklist/3-305565-\` 作为路径填入。此时路由为 [\`/ifeng/news/shanklist/3-305565-\`](https://rsshub.app/ifeng/news/shanklist/3-305565-)
 :::`,
 };
 
@@ -33,10 +33,6 @@ type ContentAttachment = {
 type ListedNews = Omit<DataItem, 'description'> & { link: string; description?: { url: string; height?: number; width?: number } };
 
 const isParagraph = (entry: string | ContentAttachment): entry is string => String(entry) === entry;
-
-function parseNewsDate(value: string) {
-    return value?.trim() ? parseDateStrict(value.trim(), 'YYYY-MM-DD HH:mm:ss', 8) : undefined;
-}
 
 async function handler(ctx) {
     const limit = getRouteLimit(ctx, 20);
@@ -57,40 +53,43 @@ async function handler(ctx) {
     const list: ListedNews[] = newsStream.slice(0, limit).map((item) => ({
         title: item.title,
         link: item.url,
-        pubDate: parseNewsDate(item.newsTime),
+        pubDate: parseDate(item.newsTime, 8),
         description: item.thumbnails.image.pop(),
     }));
 
     const items = await pMap(
         list,
         async (item) => {
-            const response = await cache.tryGet(`ifeng:article-html:${item.link}`, async () => (await got(item.link)).data);
-            const author = response.match(/"editorName":"(.*?)",/)[1];
-            const category = response.match(/\},"keywords":"(.*?)",/)[1].split(',');
-            const image = item.description;
-            const contentList: Array<{ data: string | ContentAttachment }> = JSON.parse(response.match(/"contentList":(\[.*?\]),/)[1]);
-            const description = contentList.map((content) => content.data);
-            const content = renderToString(
-                <>
-                    {image ? (
-                        <figure>
-                            <img src={image.url} height={image.height} width={image.width} />
-                        </figure>
-                    ) : null}
-                    {description?.length
-                        ? description.map((entry) =>
-                              isParagraph(entry) ? (
-                                  <>{raw(entry.replaceAll('data-lazyload=', 'src='))}</>
-                              ) : entry?.attachmentType === 'video' ? (
-                                  <video controls poster={entry.bigPosterUrl}>
-                                      <source src={entry.playUrl} />
-                                  </video>
-                              ) : null
-                          )
-                        : null}
-                </>
-            );
-            return { ...item, author, category, description: content };
+            const detail = await cache.tryGet(`ifeng:news:${item.link}`, async () => {
+                const { data: response } = await got(item.link);
+                const author = response.match(/"editorName":"(.*?)",/)[1];
+                const category = response.match(/\},"keywords":"(.*?)",/)[1].split(',');
+                const image = item.description;
+                const contentList: Array<{ data: string | ContentAttachment }> = JSON.parse(response.match(/"contentList":(\[.*?\]),/)[1]);
+                const description = contentList.map((content) => content.data);
+                const content = renderToString(
+                    <>
+                        {image ? (
+                            <figure>
+                                <img src={image.url} height={image.height} width={image.width} />
+                            </figure>
+                        ) : null}
+                        {description?.length
+                            ? description.map((entry) =>
+                                  isParagraph(entry) ? (
+                                      <>{raw(entry.replaceAll('data-lazyload=', 'src='))}</>
+                                  ) : entry?.attachmentType === 'video' ? (
+                                      <video controls poster={entry.bigPosterUrl}>
+                                          <source src={entry.playUrl} />
+                                      </video>
+                                  ) : null
+                              )
+                            : null}
+                    </>
+                );
+                return { author, category, description: content };
+            });
+            return { ...item, ...detail };
         },
         { concurrency: 3 }
     );

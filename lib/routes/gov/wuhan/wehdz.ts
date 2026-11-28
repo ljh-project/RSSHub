@@ -16,9 +16,9 @@ export const route: Route = {
     name: '东湖新技术开发区 - 光谷新闻',
     maintainers: ['tudou027'],
     handler,
-    description: `|  通知公告 |   光谷要闻  |   产业动态  |
-| :-------: | :---------: | :---------: |
-| tz\\_68628 | ggxw\\_68629 | cydt\\_68630 |`,
+    description: `| 通知公告 |  光谷要闻  |  产业动态  |
+| :------: | :--------: | :--------: |
+| tz_68628 | ggxw_68629 | cydt_68630 |`,
 };
 
 const rootUrl = 'https://www.wehdz.gov.cn';
@@ -36,12 +36,10 @@ async function handler(ctx: Context) {
         .map((item): DataItem => {
             const $item = $(item);
             const a = $item.find('a[href]');
-            const date = $item.find('span').text().trim();
-            const pubDate = date ? parseDateStrict(date, 'YYYY-MM-DD', 8) : undefined;
             return {
                 title: a.text(),
                 link: new URL(a.attr('href')!, currentUrl).href,
-                pubDate,
+                pubDate: parseDateStrict($item.find('span').text(), 'YYYY-MM-DD', 8),
             };
         });
 
@@ -50,11 +48,9 @@ async function handler(ctx: Context) {
             cache.tryGet(item.link!, async () => {
                 const res = await ofetch(item.link!);
                 const content = load(res);
-                const date = content('meta[name="PubDate"]').attr('content');
-                const pubDate = date ? parseDateStrict(date, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm'], 8) : undefined;
 
                 item.description = content('div.content_article').html();
-                item.pubDate = pubDate ?? item.pubDate;
+                item.pubDate = parseDateStrict(content('meta[name="PubDate"]').prop('content'), ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm'], 8);
                 return item;
             })
         )

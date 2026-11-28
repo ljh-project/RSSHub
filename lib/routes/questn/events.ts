@@ -1,5 +1,6 @@
 import type { Route } from '@/types';
 import ofetch from '@/utils/ofetch';
+import { getRouteLimit } from '@/utils/route-limit';
 import { parseDate } from '@/utils/time';
 
 import { parseFilterStr } from './util';
@@ -18,10 +19,10 @@ export const route: Route = {
 Filter parameters:
 
 - category: 100: trending, 200: newest, 300: top
-- status\\_filter: 0: all, 100: available, 400: missed
-- community\\_filter: 0: all community, 100: verified, 200: followed
-- rewards\\_filter: 0: all rewards, 100: nft, 200: token, 400: whitelist
-- chain\\_filter: 0: all chains, 1: ethereum, 56: bsc, 137: polygon, 42161: arb, 10: op, 324: zksync, 43114: avax
+- status_filter: 0: all, 100: available, 400: missed
+- community_filter: 0: all community, 100: verified, 200: followed
+- rewards_filter: 0: all rewards, 100: nft, 200: token, 400: whitelist
+- chain_filter: 0: all chains, 1: ethereum, 56: bsc, 137: polygon, 42161: arb, 10: op, 324: zksync, 43114: avax
 - search: 'Search keyword',
 - count: 'Number of events to fetch',
 
@@ -58,8 +59,6 @@ async function handler(ctx) {
         count?: string;
     } = parseFilterStr(ctx.req.param('filter'));
 
-    const requestedLimit = Number(parsedFilter.count || ctx.req.query('limit'));
-    const count = Number.isSafeInteger(requestedLimit) && requestedLimit > 0 ? requestedLimit : 20;
     const params = {
         category: parsedFilter.category || '200',
         status_filter: parsedFilter.status_filter || '100',
@@ -67,7 +66,7 @@ async function handler(ctx) {
         rewards_filter: parsedFilter.rewards_filter || parsedFilter.reward_filter || '0',
         chain_filter: parsedFilter.chain_filter || '0',
         search: parsedFilter.search || '',
-        count: String(count),
+        count: parsedFilter.count || String(getRouteLimit(ctx, 20)),
         page: '1',
     };
 

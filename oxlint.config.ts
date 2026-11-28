@@ -421,7 +421,7 @@ export default defineConfig({
         'unicorn/prefer-negative-index': 'error',
         'unicorn/prefer-node-protocol': 'error',
         'unicorn/prefer-number-coercion': 'error',
-        'unicorn-js/prefer-number-is-safe-integer': 'error',
+        // 'unicorn-js/prefer-number-is-safe-integer': 'error', off
         // "unicorn/prefer-number-properties": "error", // checkNaN: false
         'unicorn-js/prefer-object-define-properties': 'error',
         'unicorn-js/prefer-object-destructuring-defaults': 'error',
@@ -661,6 +661,10 @@ export default defineConfig({
                 message: 'Usage of `_ctx` is not allowed.',
             },
             {
+                selector: 'CallExpression[callee.object.name="Number"][callee.property.name=/^(isSafeInteger|isFinite)$/]',
+                message: 'Number.isSafeInteger() and Number.isFinite() are over-engineered defensive checks.',
+            },
+            {
                 selector: 'JSXAttribute[name.name="class"]',
                 message: 'Usage of `class` is not allowed.',
             },
@@ -671,6 +675,10 @@ export default defineConfig({
             {
                 selector: ':matches(Property[key.name="dangerouslySetInnerHTML"], Property[key.value="dangerouslySetInnerHTML"])',
                 message: 'Usage of `dangerouslySetInnerHTML` is not allowed.',
+            },
+            {
+                selector: ':matches(ImportSpecifier[imported.name="createHash"], MemberExpression[property.name="createHash"])',
+                message: 'Usage of `createHash` is not allowed. Use `@/utils/hash` or `hash()` from `node:crypto` instead.',
             },
         ],
 

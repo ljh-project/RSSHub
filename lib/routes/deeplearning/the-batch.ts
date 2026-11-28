@@ -110,14 +110,16 @@ async function handler(ctx: Context) {
 
                 const rows = parseFlightData(Buffer.from(detailResponse));
 
-                const bodyId = rows
+                const bodyLiteral = rows
                     .values()
-                    .find((row) => row.includes('"prose'))
-                    ?.match(/"__html":"\$(\w+)"/)?.[1];
-                if (!bodyId || !rows.has(bodyId)) {
+                    .find((row) => /"className":"[^"]*\bprose\b/.test(row))
+                    ?.match(/"__html":("(?:[^"\\]|\\.)*")/)?.[1];
+                const bodyValue: string | undefined = bodyLiteral && JSON.parse(bodyLiteral);
+                const body = bodyValue?.startsWith('$') ? rows.get(bodyValue.slice(1)) : bodyValue;
+                if (!body) {
                     throw new Error('No article body found in flight payload');
                 }
-                const $$ = load(rows.get(bodyId)!);
+                const $$ = load(body);
 
                 $$('#elevenlabs-audionative-widget').remove();
 
@@ -155,8 +157,7 @@ async function handler(ctx: Context) {
                 });
                 item.title = title;
                 item.description = description;
-                const publishedTime = meta('article:published_time');
-                item.pubDate = publishedTime ? parseDate(publishedTime) : undefined;
+                item.pubDate = parseDate(meta('article:published_time'));
                 item.category = metaProps.filter((props) => props.property === 'article:tag').map((props) => props.content);
                 item.author = meta('article:author');
                 item.content = {
@@ -165,8 +166,7 @@ async function handler(ctx: Context) {
                 };
                 item.image = image;
                 item.banner = image;
-                const modifiedTime = meta('article:modified_time');
-                item.updated = modifiedTime ? parseDate(modifiedTime) : undefined;
+                item.updated = parseDate(meta('article:modified_time'));
 
                 return item;
             }),
@@ -205,7 +205,6 @@ If you subscribe to [Data Points](https://www.deeplearning.ai/the-batch/tag/data
 | [ML Research](https://www.deeplearning.ai/the-batch/tag/research/)     | [research](https://rsshub.app/deeplearning/the-batch/research)       |
 | [Business](https://www.deeplearning.ai/the-batch/tag/business/)        | [business](https://rsshub.app/deeplearning/the-batch/business)       |
 | [Science](https://www.deeplearning.ai/the-batch/tag/science/)          | [science](https://rsshub.app/deeplearning/the-batch/science)         |
-| [AI & Society](https://www.deeplearning.ai/the-batch/tag/ai-society/)  | [ai-society](https://rsshub.app/deeplearning/the-batch/ai-society)   |
 | [Culture](https://www.deeplearning.ai/the-batch/tag/culture/)          | [culture](https://rsshub.app/deeplearning/the-batch/culture)         |
 | [Hardware](https://www.deeplearning.ai/the-batch/tag/hardware/)        | [hardware](https://rsshub.app/deeplearning/the-batch/hardware)       |
 | [AI Careers](https://www.deeplearning.ai/the-batch/tag/ai-careers/)    | [ai-careers](https://rsshub.app/deeplearning/the-batch/ai-careers)   |

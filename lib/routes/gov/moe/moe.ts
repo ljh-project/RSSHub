@@ -31,9 +31,9 @@ export const route: Route = {
     name: '新闻',
     maintainers: ['Crawler995'],
     handler,
-    description: `|   政策解读   |   最新文件   | 公告公示 |      教育部简报     |     教育要闻     |
-| :----------: | :----------: | :------: | :-----------------: | :--------------: |
-| policy\\_anal | newest\\_file |  notice  | edu\\_ministry\\_news | edu\\_focus\\_news |`,
+    description: `|   政策解读  |   最新文件  | 公告公示 |     教育部简报    |    教育要闻    |
+| :---------: | :---------: | :------: | :---------------: | :------------: |
+| policy_anal | newest_file |  notice  | edu_ministry_news | edu_focus_news |`,
 };
 
 async function handler(ctx) {
@@ -93,7 +93,7 @@ async function handler(ctx) {
                           } else if (itemUrl.includes('srcsite')) {
                               description = data('div#content_body_xxgk').html();
                           } else if (itemUrl.includes('jyb_')) {
-                              const content = data('div.moe-detail-box, div#moe-detail-box').first();
+                              const content = data('div.moe-detail-box, div#moe-detail-box');
                               content.find('#moe-detail-page-set, #moeCode, .moe-detail-shuxing').remove();
                               content.children('h1').remove();
                               description = content.html();

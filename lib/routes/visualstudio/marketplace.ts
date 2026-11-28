@@ -25,7 +25,7 @@ export const route: Route = {
     handler,
     description: `| Featured | Trending Weekly | Trending Monthly | Trending Daily | Most Popular | Recently Added |
 | -------- | --------------- | ---------------- | -------------- | ------------ | -------------- |
-| featured | trending        | trending\\_m      | trending\\_d    | popular      | new            |`,
+| featured | trending        | trending_m       | trending_d     | popular      | new            |`,
 };
 
 async function handler(ctx: Context) {
@@ -54,7 +54,7 @@ async function handler(ctx: Context) {
             description: item.s,
             link: new URL(item.l, rootLink).href,
             author: item.a,
-            image: item.i || undefined,
+            image: item.i,
         })),
     };
 }

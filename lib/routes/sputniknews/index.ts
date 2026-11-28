@@ -83,9 +83,9 @@ export const route: Route = {
 
 Categories for Chinese site:
 
-| 新闻 | 中国  | 俄罗斯 | 国际            | 俄中关系                 | 评论    |
-| ---- | ----- | ------ | --------------- | ------------------------ | ------- |
-| news | china | russia | category\\_guoji | russia\\_china\\_relations | opinion |
+| 新闻 | 中国  | 俄罗斯 | 国际           | 俄中关系               | 评论    |
+| ---- | ----- | ------ | -------------- | ---------------------- | ------- |
+| news | china | russia | category_guoji | russia_china_relations | opinion |
 
 Language
 
@@ -169,10 +169,7 @@ async function handler(ctx) {
                 content('div.article__article-info[data-type="article"]').remove();
 
                 content('img[data-srcset]').each((_, image) => {
-                    const srcset = content(image).attr('data-srcset');
-                    if (srcset) {
-                        content(image).attr('srcset', srcset);
-                    }
+                    content(image).attr('srcset', content(image).attr('data-srcset'));
                 });
 
                 return { pubDate, category, description: content('.article').html() };

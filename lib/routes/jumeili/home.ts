@@ -1,11 +1,10 @@
-import { createHash } from 'node:crypto';
-
 import { load } from 'cheerio';
 import pMap from 'p-map';
 
 import { config } from '@/config';
 import type { DataItem, Route } from '@/types';
 import cache from '@/utils/cache';
+import { sha256 } from '@/utils/hash';
 import ofetch from '@/utils/ofetch';
 
 export const route: Route = {
@@ -61,8 +60,7 @@ async function handler(ctx) {
         },
     });
 
-    const body = typeof response === 'string' ? JSON.parse(response) : response;
-    const data = typeof body === 'string' ? JSON.parse(body) : body;
+    const data = JSON.parse(JSON.parse(response));
 
     let items: Array<DataItem & { link: string }> = data.items.map((item) => ({
         title: item.title,
@@ -74,7 +72,7 @@ async function handler(ctx) {
     }));
 
     if (cookie) {
-        const cookieHash = createHash('sha256').update(cookie).digest('hex');
+        const cookieHash = sha256(cookie);
         items = await pMap(
             items,
             async (item) => {

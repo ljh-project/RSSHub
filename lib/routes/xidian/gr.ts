@@ -1,7 +1,4 @@
-import type { Cheerio, CheerioAPI } from 'cheerio';
 import { load } from 'cheerio';
-import type { AnyNode } from 'domhandler';
-import { cloneNode, Document } from 'domhandler';
 import pMap from 'p-map';
 
 import type { DataItem, Route } from '@/types';
@@ -192,33 +189,33 @@ export const route: Route = {
     url: 'gr.xidian.edu.cn',
     maintainers: ['ZiHao256'],
     handler,
-    description: `| 文章来源                    | 参数          |
-| --------------------------- | ------------- |
-| ✅主页 - 最新动态           | home\\_zxdt    |
-| ✅主页 - 通知公告           | home\\_tzgg1   |
-| ✅主页 - 讲座报告           | home\\_jzbg    |
-| ✅研院介绍 - 基本情况       | yyjs\\_jbqk    |
-| ✅研院介绍 - 机构设置       | yyjs\\_jbqk1   |
-| ✅研院介绍 - 部门领导       | yyjs\\_jbqk2   |
-| ✅研院介绍 - 服务指南       | yyjs\\_jbqk3   |
-| ✅研院介绍 - 学院联系方式   | yyjs\\_jbqk4   |
-| ✅招生信息                  | yjsy          |
-| ✅招生信息 - 硕士研究生招生 | yjsy\\_yjszs   |
-| ✅招生信息 - 博士研究生招生 | yjsy\\_bsyjszs |
-| ✅招生信息 - 其他类型招生   | yjsy\\_qtlxzs  |
-| ✅培养管理                  | pygl          |
-| ✅培养管理 - 学术学位       | pygl\\_xsxw    |
-| ✅培养管理 - 专业学位       | pygl\\_zyxw    |
-| ✅培养管理 - 教学管理       | pygl\\_jxgl    |
-| ✅培养管理 - 课程建设       | pygl\\_jxgl1   |
-| ✅培养管理 - 管理规定       | pygl\\_jxgl2   |
-| ✅培养管理 - 国际交流       | pygl\\_jxgl3   |
-| ✅培养管理 - 办事流程       | pygl\\_bslc    |
-| ✅学位授予                  | xwsy          |
-| ✅学位授予 - 通知公告       | xwsy\\_tzgg    |
-| ✅学位授予 - 规章制度       | xwsy\\_gzzd    |
-| ✅学位授予 - 授位名单       | xwsy\\_swmd    |
-| ✅学位授予 - 资料下载       | xwsy\\_zlxz    |`,
+    description: `| 文章来源                    | 参数         |
+| --------------------------- | ------------ |
+| ✅主页 - 最新动态           | home_zxdt    |
+| ✅主页 - 通知公告           | home_tzgg1   |
+| ✅主页 - 讲座报告           | home_jzbg    |
+| ✅研院介绍 - 基本情况       | yyjs_jbqk    |
+| ✅研院介绍 - 机构设置       | yyjs_jbqk1   |
+| ✅研院介绍 - 部门领导       | yyjs_jbqk2   |
+| ✅研院介绍 - 服务指南       | yyjs_jbqk3   |
+| ✅研院介绍 - 学院联系方式   | yyjs_jbqk4   |
+| ✅招生信息                  | yjsy         |
+| ✅招生信息 - 硕士研究生招生 | yjsy_yjszs   |
+| ✅招生信息 - 博士研究生招生 | yjsy_bsyjszs |
+| ✅招生信息 - 其他类型招生   | yjsy_qtlxzs  |
+| ✅培养管理                  | pygl         |
+| ✅培养管理 - 学术学位       | pygl_xsxw    |
+| ✅培养管理 - 专业学位       | pygl_zyxw    |
+| ✅培养管理 - 教学管理       | pygl_jxgl    |
+| ✅培养管理 - 课程建设       | pygl_jxgl1   |
+| ✅培养管理 - 管理规定       | pygl_jxgl2   |
+| ✅培养管理 - 国际交流       | pygl_jxgl3   |
+| ✅培养管理 - 办事流程       | pygl_bslc    |
+| ✅学位授予                  | xwsy         |
+| ✅学位授予 - 通知公告       | xwsy_tzgg    |
+| ✅学位授予 - 规章制度       | xwsy_gzzd    |
+| ✅学位授予 - 授位名单       | xwsy_swmd    |
+| ✅学位授予 - 资料下载       | xwsy_zlxz    |`,
     radar: [
         {
             source: ['gr.xidian.edu.cn/'],
@@ -255,27 +252,24 @@ async function handler(ctx) {
         });
     items = await pMap(
         items,
-        (item) =>
-            mapResolvedValue(
-                cache.tryGet(`xidian:gr:content:v2:${item.link}`, async () => {
-                    const detailResponse = await got(item.link, {
-                        headers: {
-                            referer: url,
-                        },
+        async (item) => {
+            const detail = await cache.tryGet(`xidian:gr:content:v2:${item.link}`, async () => {
+                const detailResponse = await got(item.link, {
+                    headers: {
+                        referer: url,
+                    },
+                });
+                const content = load(detailResponse.data);
+                const body = content('[name="_newscontent_fromname"] .v_news_content');
+                content('[name="_newscontent_fromname"] a[href*="download.jsp"]')
+                    .filter((_, attachment) => !content(attachment).closest('.v_news_content').length)
+                    .each((_, attachment) => {
+                        body.append(content('<p/>').append(attachment));
                     });
-                    const content = load(detailResponse.data);
-                    const body = content('[name="_newscontent_fromname"] .v_news_content').first();
-                    content('[name="_newscontent_fromname"] a[href*="download.jsp"]')
-                        .filter((_, attachment) => !content(attachment).closest('.v_news_content').length)
-                        .each((_, attachment) => {
-                            const attachmentWrapper1 = content('<p/>');
-                            attachmentWrapper1.append(copyContent(content(attachment), content));
-                            body.append(attachmentWrapper1);
-                        });
-                    return { description: body.html() ?? undefined };
-                }),
-                (detail) => ({ ...item, ...detail })
-            ),
+                return { description: body.html() };
+            });
+            return { ...item, ...detail };
+        },
         { concurrency: 3, stopOnError: false }
     );
     return {
@@ -283,16 +277,4 @@ async function handler(ctx) {
         link: url,
         item: items,
     };
-}
-async function mapResolvedValue<T, U>(promise: Promise<T>, mapper: (value: T) => U | Promise<U>): Promise<U> {
-    const value = await promise;
-    return mapper(value);
-}
-function copyContent<T extends AnyNode>(selection: Cheerio<T>, $: CheerioAPI): Cheerio<T> {
-    const nodes = selection.toArray().map((node) => cloneNode(node, true));
-    const root = new Document(nodes);
-    for (const node of nodes) {
-        node.parent = root;
-    }
-    return $(nodes);
 }

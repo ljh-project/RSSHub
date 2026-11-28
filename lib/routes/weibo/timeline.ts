@@ -7,7 +7,7 @@ import ConfigNotFoundError from '@/errors/types/config-not-found';
 import type { Route } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
-import md5 from '@/utils/md5';
+import { md5 } from '@/utils/hash';
 import { fallback, queryToBoolean } from '@/utils/readable-social';
 import { createWeiboOAuthState } from '@/utils/weibo-oauth';
 
@@ -60,7 +60,7 @@ export const route: Route = {
     description: `::: warning
 需要对应用户打开页面进行授权生成 token 才能生成内容
 
-自部署需要申请并配置微博 key，具体见部署文档。开启 ACCESS\\_KEY 时，先使用有效 key/code 打开订阅地址发起授权；回调使用十分钟内有效的一次性 state，要求可用的 memory 或 Redis 缓存。
+自部署需要申请并配置微博 key，具体见部署文档。开启 ACCESS_KEY 时，先使用有效 key/code 打开订阅地址发起授权；回调使用十分钟内有效的一次性 state，要求可用的 memory 或 Redis 缓存。
 :::`,
 };
 
@@ -193,7 +193,7 @@ async function handler(ctx) {
             const token = rep.data.access_token;
             const uid = rep.data.uid;
             const expires_in = rep.data.expires_in;
-            if (!token || !uid || !Number.isFinite(expires_in) || expires_in <= 0) {
+            if (!token || !uid) {
                 throw new Error('Weibo OAuth did not return a valid access token. Start authorization again.');
             }
             await cache.set('weibotimelineuid' + uid, token, expires_in);

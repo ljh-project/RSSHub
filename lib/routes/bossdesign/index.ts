@@ -20,9 +20,9 @@ export const route: Route = {
     name: '分类',
     maintainers: ['TonyRL'],
     handler,
-    description: `| Boss 笔记 | 电脑日志        | 素材资源         | 设计师神器      | 设计教程        | 设计资讯            |
-| --------- | --------------- | ---------------- | --------------- | --------------- | ------------------- |
-| note      | computer-skills | design-resources | design-software | design-tutorial | design\\_information |`,
+    description: `| Boss 笔记 | 电脑日志        | 素材资源         | 设计师神器      | 设计教程        | 设计资讯           |
+| --------- | --------------- | ---------------- | --------------- | --------------- | ------------------ |
+| note      | computer-skills | design-resources | design-software | design-tutorial | design_information |`,
 };
 
 async function handler(ctx) {
@@ -48,8 +48,8 @@ async function handler(ctx) {
     const items = posts.map((item) => ({
         title: item.title.rendered,
         description: item.content.rendered,
-        pubDate: item.date_gmt ? parseDate(item.date_gmt, 0) : undefined,
-        updated: item.modified_gmt ? parseDate(item.modified_gmt, 0) : undefined,
+        pubDate: parseDate(item.date_gmt, 0),
+        updated: parseDate(item.modified_gmt, 0),
         link: item.link,
         guid: item.guid.rendered,
         category: [...new Set([...item._embedded['wp:term'][0].map((item) => item.name), ...item._embedded['wp:term'][1].map((item) => item.name)])],

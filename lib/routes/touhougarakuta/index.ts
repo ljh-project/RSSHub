@@ -25,9 +25,9 @@ Article types:
 | ----- | ------ | ---------- | ------ | ------ | ---- |
 | index | series | interviews | novels | comics | news |
 
-| Music review  | Game review  | Book review  | Where are you   |
-| ------------- | ------------ | ------------ | --------------- |
-| music\\_review | game\\_review | book\\_review | where\\_are\\_you |
+| Music review | Game review | Book review | Where are you |
+| ------------ | ----------- | ----------- | ------------- |
+| music_review | game_review | book_review | where_are_you |
 
 **Note:** The index type includes all types of articles. Think twice before using it.`,
     handler,
@@ -38,12 +38,6 @@ const languageCodes = {
     ko: 'ko',
     ja: 'ja',
 };
-function parsePubDate(value?: string) {
-    if (!value) {
-        return;
-    }
-    return parseDate(/z|[+-]\d{2}:?\d{2}$/i.test(value) ? value : `${value}+09:00`);
-}
 async function handler(ctx: Context) {
     const { language, type } = ctx.req.param();
     if (!Object.keys(languageCodes).includes(language)) {
@@ -89,7 +83,7 @@ async function handler(ctx: Context) {
             }
             return {
                 title: article.title,
-                pubDate: parsePubDate(article.date),
+                pubDate: parseDate(`${article.date}+09:00`),
                 link: `${baseUrl}/${article.type}/${article.slug}`,
                 description,
                 category: article.tags.nodes.map((tag) => tag.name),

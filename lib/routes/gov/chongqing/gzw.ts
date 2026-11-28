@@ -35,9 +35,9 @@ export const route: Route = {
             target: '/gzw/gqzp',
         },
     ],
-    description: `| 通知公告  | 国企资讯 | 国企简介 | 国企招聘 |
-| --------- | -------- | -------- | -------- |
-| tzgg\\_191 | gqdj     | gqjj     | gqzp     |`,
+    description: `| 通知公告 | 国企资讯 | 国企简介 | 国企招聘 |
+| -------- | -------- | -------- | -------- |
+| tzgg_191 | gqdj     | gqjj     | gqzp     |`,
 };
 
 async function handler(ctx) {
@@ -60,7 +60,6 @@ async function handler(ctx) {
             const $item = $(item);
 
             const a = $item.find('a');
-            const pubDate = $item.find('span').text();
 
             return {
                 title: a.text(),
@@ -68,7 +67,7 @@ async function handler(ctx) {
                     a.prop('href')!.replace(/^\./, () => category),
                     rootUrl
                 ).href,
-                pubDate: pubDate ? parseDate(pubDate, 8) : undefined,
+                pubDate: parseDate($item.find('span').text(), 8),
             };
         });
 
@@ -79,14 +78,11 @@ async function handler(ctx) {
 
                 const content = load(detailResponse);
 
-                item.title = content('meta[name="ArticleTitle"]').prop('content') || item.title;
+                item.title = content('meta[name="ArticleTitle"]').prop('content');
                 item.description = content('div.trs_paper_default').html();
                 item.author = content('meta[name="ContentSource"]').prop('content');
-                item.category = (content('meta[name="Keywords"]').prop('content') ?? '').split(/;/).filter(Boolean);
-                const pubDate = content('meta[name="PubDate"]').prop('content');
-                if (pubDate) {
-                    item.pubDate = parseDate(pubDate, 8);
-                }
+                item.category = content('meta[name="Keywords"]').prop('content').split(/;/).filter(Boolean);
+                item.pubDate = parseDate(content('meta[name="PubDate"]').prop('content'), 8);
 
                 return item;
             })

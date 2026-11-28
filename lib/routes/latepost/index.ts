@@ -1,12 +1,9 @@
 import { load } from 'cheerio';
-import { FetchError } from 'ofetch';
 import pMap from 'p-map';
 
 import type { Data, Route } from '@/types';
 import cache from '@/utils/cache';
-import got from '@/utils/got';
-import type { Page } from '@/utils/playwright';
-import { getPlaywrightPage } from '@/utils/playwright';
+import ofetch from '@/utils/ofetch';
 import { getRouteLimit } from '@/utils/route-limit';
 import { parseDate, parseRelativeDate } from '@/utils/time';
 import { isOnSite } from '@/utils/valid-host';
@@ -20,34 +17,7 @@ import { isOnSite } from '@/utils/valid-host';
  */
 const arrayToDictionary = (arr) => Object.fromEntries(arr.map(({ id, ...rest }) => [id, rest]));
 
-const allowedResourceTypes = new Set(['document', 'xhr', 'fetch']);
-
-function isCertificateTrustError(error: unknown): error is Error {
-    return error instanceof Error && (('code' in error && (error.code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' || error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE')) || isCertificateTrustError(error.cause));
-}
-
-async function requestData(page: Page | undefined, url: string, form?: Record<string, string | number>) {
-    if (!page) {
-        const { data } = form ? await got.post(url, { form }) : await got(url);
-        return data;
-    }
-    const body = form ? new URLSearchParams(Object.entries(form).map(([key, value]) => [key, String(value)])).toString() : undefined;
-    return await page.evaluate(
-        async ({ url, body }) => {
-            const response = await fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body } : undefined);
-            if (!response.ok) {
-                throw new Error(`LatePost returned HTTP ${response.status}: ${url}`);
-            }
-            const text = await response.text();
-            try {
-                return JSON.parse(text);
-            } catch {
-                return text;
-            }
-        },
-        { url, body }
-    );
-}
+const requestData = (url: string, form?: Record<string, string | number>) => ofetch(url, form ? { method: 'POST', body: new URLSearchParams(Object.entries(form).map(([key, value]) => [key, String(value)])) } : undefined);
 
 export const route: Route = {
     path: '/:proma?',
@@ -56,7 +26,7 @@ export const route: Route = {
     parameters: { proma: '栏目 id，见下表，默认为最新报道' },
     features: {
         requireConfig: false,
-        requirePuppeteer: true,
+        requirePuppeteer: false,
         antiCrawler: false,
         supportBT: false,
         supportPodcast: false,
@@ -71,27 +41,6 @@ export const route: Route = {
 };
 
 async function handler(ctx): Promise<Data> {
-    try {
-        return await fetchFeed(ctx);
-    } catch (error) {
-        if (!(error instanceof FetchError) || !isCertificateTrustError(error)) {
-            throw error;
-        }
-    }
-    const { page, destroy } = await getPlaywrightPage('https://www.latepost.com/', { noGoto: true, closeTimeout: 0 });
-    try {
-        await page.route('**/*', (route) => (allowedResourceTypes.has(route.request().resourceType()) ? route.continue() : route.abort()));
-        const response = await page.goto('https://www.latepost.com/', { waitUntil: 'domcontentloaded' });
-        if (!response?.ok() || new URL(page.url()).origin !== 'https://www.latepost.com') {
-            throw new Error('LatePost did not provide its public website.');
-        }
-        return await fetchFeed(ctx, page);
-    } finally {
-        await destroy();
-    }
-}
-
-async function fetchFeed(ctx, page?: Page): Promise<Data> {
     const proma = ctx.req.param('proma');
     const limit = getRouteLimit(ctx, 5);
 
@@ -106,10 +55,10 @@ async function fetchFeed(ctx, page?: Page): Promise<Data> {
     const apiCommentUrl = new URL('news/get-comment', rootUrl).href;
     const apiUrl = new URL(proma ? 'news/get-news-data' : 'site/index', rootUrl).href;
 
-    const columnResponse = await requestData(page, apiColumnUrl);
+    const columnResponse = await requestData(apiColumnUrl);
     const columns = arrayToDictionary(columnResponse?.data ?? []);
 
-    const response = await requestData(page, apiUrl, {
+    const response = await requestData(apiUrl, {
         page: 1,
         limit,
         programa: Number(proma),
@@ -120,13 +69,11 @@ async function fetchFeed(ctx, page?: Page): Promise<Data> {
         link: string;
         category: Array<string | undefined>;
         guid: string | number;
-        pubDate?: Temporal.Instant;
     }> = response.data.slice(0, limit).map((item) => ({
         title: item.title,
         link: new URL(item.detail_url, rootUrl).href,
         category: [Number(item.is_dj) === 1 ? exclusiveCategory : undefined, item.programa ? columns[item.programa]?.title : undefined, ...item.label.map((c) => c.label)],
         guid: item.id,
-        pubDate: item.release_time ? parseDate(item.release_time, ['MM月DD日', 'YYYY年MM月DD日'], 8) : undefined,
     }));
 
     const items = await pMap(
@@ -138,9 +85,9 @@ async function fetchFeed(ctx, page?: Page): Promise<Data> {
                 return { ...item, category, guid: `latepost-${item.guid}` };
             }
             const article = await cache.tryGet(`latepost:article:${item.link}`, async () => {
-                const detailResponse = await requestData(page, item.link);
+                const detailResponse = await requestData(item.link);
 
-                const commentResponse = await requestData(page, apiCommentUrl, {
+                const commentResponse = await requestData(apiCommentUrl, {
                     news_id: item.guid,
                     page: 1,
                     limit: 1,
@@ -168,15 +115,13 @@ async function fetchFeed(ctx, page?: Page): Promise<Data> {
                 const description = coverHtml + abstractHtml + content('#select-main').html()!.replaceAll('<p><br></p>', '');
                 const author = content('div.article-header-author div.author-link a.label').first().text();
                 const date = content('div.article-header-date').text();
-                const pubDate = date
-                    ? /\d+月\d+日/.test(date)
-                        ? parseDate(date, ['YYYY年MM月DD日 HH:mm', 'MM月DD日 HH:mm'], 8)
-                        : /ago|^(?:just\s*now|刚刚|剛剛)$|(?:[秒天周月年]|分[钟鍾]?|小[时時]|星期)\s*[前后後]/.test(date)
-                          ? parseRelativeDate(date)
-                          : parseRelativeDate(date, 8)
-                    : undefined;
+                const pubDate = /\d+月\d+日/.test(date)
+                    ? parseDate(date, ['YYYY年MM月DD日 HH:mm', 'MM月DD日 HH:mm'], 8)
+                    : /ago|^(?:just\s*now|刚刚|剛剛)$|(?:[秒天周月年]|分[钟鍾]?|小[时時]|星期)\s*[前后後]/.test(date)
+                      ? parseRelativeDate(date)
+                      : parseRelativeDate(date, 8);
 
-                return { title, description, author, pubDate, comments: Number(commentResponse.count ?? commentResponse.data?.length ?? 0) };
+                return { title, description, author, pubDate, comments: Number(commentResponse.count) };
             });
             return {
                 ...item,
@@ -185,7 +130,7 @@ async function fetchFeed(ctx, page?: Page): Promise<Data> {
                 author: article.author,
                 category,
                 guid: `latepost-${item.guid}`,
-                pubDate: article.pubDate ?? item.pubDate,
+                pubDate: article.pubDate,
                 comments: article.comments,
             };
         },
@@ -194,7 +139,7 @@ async function fetchFeed(ctx, page?: Page): Promise<Data> {
 
     const icon = new URL('favicon.ico', rootUrl).href;
 
-    const currentResponse = await requestData(page, currentUrl);
+    const currentResponse = await requestData(currentUrl);
 
     const $ = load(currentResponse);
 

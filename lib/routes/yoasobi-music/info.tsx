@@ -1,21 +1,13 @@
-import { createHash } from 'node:crypto';
-
 import { raw } from 'hono/html';
 import { renderToString } from 'hono/jsx/dom/server';
 
 import InvalidParameterError from '@/errors/types/invalid-parameter';
 import type { Route } from '@/types';
 import got from '@/utils/got';
-import { parseDateStrict } from '@/utils/time';
+import { sha256 } from '@/utils/hash';
+import { parseDate } from '@/utils/time';
 
 import { parseJSONP } from './jsonp-helper';
-
-const parseInfoDate = (date?: string): Temporal.Instant | undefined => {
-    if (typeof date !== 'string' || !/^\d{4}\.\d{1,2}\.\d{1,2}$/.test(date)) {
-        return;
-    }
-    return parseDateStrict(date, ['YYYY.MM.DD', 'YYYY.M.D', 'YYYY.MM.D', 'YYYY.M.DD']);
-};
 
 export const route: Route = {
     path: '/info/:category?',
@@ -67,11 +59,7 @@ async function handler(ctx) {
 
         return {
             id: isBio ? undefined : item.id,
-            guid: isBio
-                ? `bio:${createHash('sha256')
-                      .update(JSON.stringify([item.url, item.kiji]))
-                      .digest('hex')}`
-                : `news:${item.id}`,
+            guid: isBio ? `bio:${sha256(JSON.stringify([item.url, item.kiji]))}` : `news:${item.id}`,
             title: isBio ? item.url : item.title,
             category: item.category,
             date: isBio ? item.url : item.date,
@@ -94,7 +82,7 @@ async function handler(ctx) {
             // the article content
             description: renderDescription(i.image, i.description.replaceAll('\n', '<br>')),
             // the article publish time
-            pubDate: parseInfoDate(i.date),
+            pubDate: parseDate(i.date, 'YYYY.M.D'),
             // guid
             guid: i.guid,
             // the article link

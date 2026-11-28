@@ -3,7 +3,7 @@ import pMap from 'p-map';
 import { config } from '@/config';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
-import md5 from '@/utils/md5';
+import { md5 } from '@/utils/hash';
 import { parseDate } from '@/utils/time';
 
 import constants from './_constants';
@@ -88,7 +88,7 @@ const getMangaMeta = async (id: string, needCover: boolean = true, lang?: string
         return { title, description };
     }
 
-    const coverFilename = relationships.find((relationship) => relationship.type === 'cover_art')?.attributes?.fileName;
+    const coverFilename = relationships.find((relationship) => relationship.type === 'cover_art')?.attributes.fileName;
     const cover = coverFilename ? `${constants.API.COVER_IMAGE}${id}/${coverFilename}.512.jpg` : undefined;
 
     return { title, description, cover };
@@ -151,7 +151,7 @@ export async function getMangaMetaByIds(ids: string[], needCover: boolean = true
         let manga = { id, title, description, cover };
 
         if (needCover) {
-            const coverFilename = rawMangaMeta.relationships.find((relationship) => relationship.type === 'cover_art')?.attributes?.fileName;
+            const coverFilename = rawMangaMeta.relationships.find((relationship) => relationship.type === 'cover_art')?.attributes.fileName;
             if (coverFilename) {
                 cover = `${constants.API.COVER_IMAGE}${rawMangaMeta.id}/${coverFilename}.512.jpg`;
                 manga = { ...manga, cover };

@@ -57,7 +57,7 @@ const createDataItem = (item: Element, $: CheerioAPI): Promise<DataItem> => {
 
 const handler = async (): Promise<Data> => {
     const $home = await fetchPageContent(ROOT_URL);
-    const newsPath = $home('nav a[href^="/zh-cn/news/"]').first().attr('href');
+    const newsPath = $home('nav a[href^="/zh-cn/news/"]').attr('href');
     if (!newsPath) {
         throw new Error('DeepSeek news navigation link was not found on the documentation homepage');
     }
@@ -65,9 +65,7 @@ const handler = async (): Promise<Data> => {
     const $ = await fetchPageContent(newsUrl);
     const newsList = $(NEWS_LIST_SELECTOR);
 
-    const entries = newsList.toArray();
-    const selected = entries;
-    const items: DataItem[] = await pMap(selected, (li) => createDataItem(li, $), { concurrency: 3 });
+    const items: DataItem[] = await pMap(newsList.toArray(), (li) => createDataItem(li, $), { concurrency: 3 });
 
     return {
         title: 'DeepSeek 新闻',

@@ -14,9 +14,9 @@ export const route: Route = {
     parameters: { category: '分类名（可用 + 连接多个分类）' },
     name: '活动资讯',
     maintainers: ['huyyi'],
-    description: `| 全部分类   | 社会责任       | 人员品牌 | 产品故事 | 优惠  | 品牌文化 | 活动速报 |
-| ---------- | -------------- | -------- | -------- | ----- | -------- | -------- |
-| news\\_list | responsibility | brand    | product  | sales | culture  | event    |`,
+    description: `| 全部分类  | 社会责任       | 人员品牌 | 产品故事 | 优惠  | 品牌文化 | 活动速报 |
+| --------- | -------------- | -------- | -------- | ----- | -------- | -------- |
+| news_list | responsibility | brand    | product  | sales | culture  | event    |`,
     handler,
 };
 
@@ -46,12 +46,11 @@ async function handler(ctx: Context) {
             cache.tryGet(newsUrl, async () => {
                 const result = await ofetch(newsUrl);
                 const $ = load(result);
-                const date = $('h3 ~ time').text();
 
                 return {
                     title: $('h3').text(),
                     link: newsUrl,
-                    pubDate: date ? parseDate(date.replaceAll('.', '-'), 8) : undefined,
+                    pubDate: parseDate($('h3 ~ time').text().replaceAll('.', '-'), 8),
                     description: $('.cmsPage').html(),
                 };
             }),

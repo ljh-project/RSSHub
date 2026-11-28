@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
 
 import type { Route } from '@/types';
-import md5 from '@/utils/md5';
+import { md5 } from '@/utils/hash';
 import ofetch from '@/utils/ofetch';
 import { getRouteLimit } from '@/utils/route-limit';
 import { parseDate } from '@/utils/time';
@@ -86,7 +86,7 @@ async function handler(ctx: Context) {
             title: caption.trim() ? caption : media.cover_title || media.recommend_caption,
             description: media.video ? `<video controls preload="metadata" poster="${media.cover_pic}"><source src="${media.video.replace('http:', 'https:')}" type="video/mp4"></video>` : `<img src="${media.cover_pic}">`,
             link: `https://www.meipai.com/media/${media.id}`,
-            pubDate: media.created_at !== undefined && media.created_at !== null ? parseDate(media.created_at, 'X') : undefined,
+            pubDate: parseDate(media.created_at, 'X'),
             author: media.user.screen_name,
             category: (media.caption ?? '')
                 .matchAll(/#([^#]+)#/g)

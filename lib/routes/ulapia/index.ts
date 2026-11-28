@@ -41,9 +41,9 @@ export const route: Route = {
     name: '频道',
     maintainers: ['Fatpandac'],
     handler,
-    description: `|     个股研报    |      行业研报      |      策略研报      |     宏观研报    |    新股研报   | 券商晨报（今日晨报） |
-| :-------------: | :----------------: | :----------------: | :-------------: | :-----------: | :------------------: |
-| stock\\_research | industry\\_research | strategy\\_research | macro\\_research | ipo\\_research |    brokerage\\_news   |`,
+    description: `|    个股研报    |      行业研报     |      策略研报     |    宏观研报    |   新股研报   | 券商晨报（今日晨报） |
+| :------------: | :---------------: | :---------------: | :------------: | :----------: | :------------------: |
+| stock_research | industry_research | strategy_research | macro_research | ipo_research |    brokerage_news    |`,
 };
 
 async function handler(ctx) {
@@ -55,18 +55,17 @@ async function handler(ctx) {
 
     const response = await got.get(url);
     const $ = load(response.data);
-    const items = $(String(selectorMap[category]))
+    const items = $(selectorMap[category])
         .toArray()
         .filter((item) => $(item).find('img').attr('src'))
         .map((item) => {
-            const date = $(item).find('div.mb-0.text-muted').last().text().split(':', 2)[1]?.trim() ?? '';
-            const pubDate = parseDateStrict(date, 'YYYY-MM-DD', 8);
+            const date = $(item).find('div.mb-0.text-muted').last().text().split(':', 2)[1];
             return {
                 title: `${$(item).find('strong').text()}  ${$(item).find('h5.mb-1').text()}`,
                 author: $(item).find('div.col.p-8.d-flex.px-3.py-3.flex-column.position-static > div:nth-child(4) > span:nth-child(2)').text(),
                 link: $(item).find('h5.mb-1 > a').attr('href'),
                 description: `<img src="${$(item).find('img').attr('src')!.split('!', 1)[0]}">`,
-                pubDate,
+                pubDate: parseDateStrict(date, 'YYYY-MM-DD', 8),
             };
         });
 

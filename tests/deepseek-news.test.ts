@@ -6,7 +6,7 @@ import { route } from '../lib/routes/deepseek/news';
 const { fetchPage } = vi.hoisted(() => ({ fetchPage: vi.fn() }));
 
 vi.mock('../lib/utils/ofetch', () => ({ default: fetchPage }));
-vi.mock('../lib/utils/cache', () => ({ default: { tryGet: (_key: string, fetcher: () => unknown) => fetcher() } }));
+vi.mock('../lib/utils/cache', () => ({ default: { tryGet: <T>(_key: string, fetcher: () => T) => fetcher() } }));
 
 describe('DeepSeek news route', () => {
     beforeEach(() => fetchPage.mockReset());
@@ -26,7 +26,7 @@ describe('DeepSeek news route', () => {
 
         expect(data).toMatchObject({
             link: 'https://api-docs.deepseek.com/zh-cn/news/news260821',
-            item: [{ title: 'DeepSeek-V3.1', link: 'https://api-docs.deepseek.com/zh-cn/news/news260821', pubDate: new Date('2026-08-21T00:00:00Z'), description: '<p>Article body</p>' }],
+            item: [{ title: 'DeepSeek-V3.1', link: 'https://api-docs.deepseek.com/zh-cn/news/news260821', pubDate: Temporal.Instant.from('2026-08-21T00:00:00Z'), description: '<p>Article body</p>' }],
         });
         expect(fetchPage).toHaveBeenCalledTimes(3);
     });

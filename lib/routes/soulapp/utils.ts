@@ -2,7 +2,7 @@ import { randomBytes, randomInt, randomUUID } from 'node:crypto';
 
 import sanitizeHtml from 'sanitize-html';
 
-import md5 from '@/utils/md5';
+import { md5 } from '@/utils/hash';
 import { parseDate } from '@/utils/time';
 
 export const apiRoot = 'https://api-h5.soulapp.cn';
@@ -131,7 +131,7 @@ export const parsePost = (item) => {
         author: item.signature,
         description: content,
         category: item.innerTags?.map((tag) => `${tag.name} (${tag.tagIdEcpt})`),
-        pubDate: item.createTime === undefined || item.createTime === null ? undefined : parseDate(item.createTime),
+        pubDate: parseDate(item.createTime),
         guid: item.postIdEcpt,
         link: `${shareRoot}?postIdEcpt=${item.postIdEcpt}`,
     };

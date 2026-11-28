@@ -3,8 +3,8 @@ import crypto from 'node:crypto';
 import { load } from 'cheerio';
 
 import cache from '@/utils/cache';
+import { md5 } from '@/utils/hash';
 import logger from '@/utils/logger';
-import md5 from '@/utils/md5';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/time';
 
@@ -61,10 +61,7 @@ const parseTuwenFromRaw = (raw) =>
         }
     });
 
-const selectDynamics = (items) => {
-    const candidates = items.filter((item) => item.entityType !== 'sponsorCard' && item.url);
-    return candidates;
-};
+const selectDynamics = (items) => items.filter((item) => item.entityType !== 'sponsorCard' && item.url);
 
 const parseDynamic = async (item) => {
     const pubDate = parseDate(item.dateline, 'X');

@@ -51,12 +51,10 @@ const handler = async (ctx) => {
         .toArray()
         .map((item): DataItem => {
             const $item = $(item);
-            const date = $item.find('span.time').text().trim();
-            const pubDate = date ? parseDateStrict(date, 'YYYY-MM-DD', 8) : undefined;
 
             return {
                 title: $item.find('a').prop('title'),
-                pubDate,
+                pubDate: parseDateStrict($item.find('span.time').text(), 'YYYY-MM-DD', 8),
                 link: new URL($item.find('a').prop('href')!, rootUrl).href,
                 language,
             };
@@ -94,9 +92,8 @@ const handler = async (ctx) => {
 
                 item.title = title;
                 item.description = description;
-                const date = $$('meta[name="PubDate"]').prop('content')?.replaceAll('∶', ':');
-                const pubDate = date ? parseDateStrict(date, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm'], 8) : undefined;
-                item.pubDate = pubDate ?? item.pubDate;
+                const date = $$('meta[name="PubDate"]').prop('content').replaceAll('∶', ':');
+                item.pubDate = parseDateStrict(date, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm'], 8);
                 item.category = [...new Set([$$('meta[name="ColumnName"]').prop('content'), $$('meta[name="ColumnKeywords"]').prop('content')])].filter(Boolean);
                 item.author = $$('meta[name="ContentSource"]').prop('content');
                 item.content = {
@@ -117,11 +114,6 @@ const handler = async (ctx) => {
             })
         )
     );
-
-    if (ctx.req.query('sorted') !== 'false' && items.every((item) => item.pubDate instanceof Temporal.Instant)) {
-        items.sort((a, b) => Temporal.Instant.compare(b.pubDate as Temporal.Instant, a.pubDate as Temporal.Instant));
-        items = items.slice(0, limit);
-    }
 
     const author = $('meta[name="SiteName"]').prop('content');
     const imageUrl = $('span.logo-icon img').prop('src');
@@ -150,9 +142,9 @@ export const route: Route = {
 若订阅 [最新信息公开](https://fgw.sh.gov.cn/fgw_zxxxgk/index.html)，网址为 \`https://fgw.sh.gov.cn/fgw_zxxxgk/index.html\`。截取 \`https://fgw.sh.gov.cn/\` 到末尾 \`/index.html\` 的部分 \`fgw_zxxxgk\` 作为参数填入，此时路由为 [\`/gov/sh/fgw/fgw_zxxxgk\`](https://rsshub.app/gov/sh/fgw/fgw_zxxxgk)。
 :::
 
-| 最新信息公开 | 要闻动态    |
-| ------------ | ----------- |
-| fgw\\_zxxxgk  | fgw\\_fzggdt |`,
+| 最新信息公开 | 要闻动态   |
+| ------------ | ---------- |
+| fgw_zxxxgk   | fgw_fzggdt |`,
     categories: ['government'],
 
     features: {

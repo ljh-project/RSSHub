@@ -5,7 +5,7 @@ import type { Route } from '@/types';
 import { ViewType } from '@/types';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
-import md5 from '@/utils/md5';
+import { md5 } from '@/utils/hash';
 import { fallback, queryToBoolean } from '@/utils/readable-social';
 
 import weiboUtils from './utils';
@@ -24,7 +24,7 @@ export const route: Route = {
                 description: '',
             },
         ],
-        requirePuppeteer: true,
+        requirePuppeteer: false,
         antiCrawler: false,
         supportBT: false,
         supportPodcast: false,
@@ -53,9 +53,6 @@ async function handler(ctx) {
                 });
                 verifier(_r);
                 const cards = _r.data?.data?.cards;
-                if (!Array.isArray(cards)) {
-                    throw new TypeError(_r.data?.msg || 'Weibo keyword search returned an invalid response.');
-                }
                 const statuses = cards.filter((card) => card.mblog).map((card) => card.mblog);
                 if (!statuses.length) {
                     const message = 'Weibo keyword search returned no posts. Please retry later or check the keyword on Weibo.';
